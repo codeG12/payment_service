@@ -32,3 +32,12 @@
 - The system automatically marks overdue invoices as `uncollectible` every hour.
 - Webhook retries occur every 10 seconds for pending deliveries.
 
+
+## 7. Running with Docker
+- Ensure you have Docker and Docker Compose installed.
+- Simply run:
+  `ash
+  docker-compose up --build
+  `
+- The application will be available at http://localhost:3000.
+- The database will be automatically initialized and migrations will run on startup.
