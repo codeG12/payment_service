@@ -84,3 +84,9 @@ CREATE TABLE webhook_deliveries (
 CREATE INDEX idx_webhook_deliveries_retry ON webhook_deliveries(state, next_retry_at)
     WHERE state = 'pending';
 ```
+
+## ER Diagram
+
+
+## Invoice State Diagram
+![Invoice State Diagram](./images/invoice_state_diagram.png)
