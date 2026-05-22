@@ -1,19 +1,22 @@
 # Build stage
-FROM rust:1-slim as builder
+FROM rust:slim as builder
 
 WORKDIR /app
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 
+# Switch to nightly to support 1.86+ dependencies
+RUN rustup toolchain install nightly && rustup default nightly
+
 # Copy all files
 COPY . .
 
-# Build the application directly
+# Build the application
 RUN cargo build --release
 
 # Run stage
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 WORKDIR /app
 
