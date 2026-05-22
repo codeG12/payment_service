@@ -1,6 +1,7 @@
 use crate::errors::AppError;
 use crate::models::customer::Customer;
 use sqlx::PgPool;
+
 pub async fn insert(
     pool: &PgPool,
     id: &str,
@@ -9,7 +10,11 @@ pub async fn insert(
     email: &str,
 ) -> Result<Customer, AppError> {
     let customer = sqlx::query_as::<_, Customer>(
-        "INSERT INTO customers (id, business_id, name, email) VALUES ($1, $2, $3, $4) RETURNING *",
+        r#"
+            INSERT INTO customers (id, business_id, name, email) 
+            VALUES ($1, $2, $3, $4) 
+            RETURNING *
+        "#,
     )
     .bind(id)
     .bind(business_id)
@@ -17,25 +22,41 @@ pub async fn insert(
     .bind(email)
     .fetch_one(pool)
     .await?;
+
     Ok(customer)
 }
+
 pub async fn list(pool: &PgPool, business_id: &str) -> Result<Vec<Customer>, AppError> {
-    let customers = sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE business_id = $1")
-        .bind(business_id)
-        .fetch_all(pool)
-        .await?;
+    let customers = sqlx::query_as::<_, Customer>(
+        r#"
+            SELECT * 
+            FROM customers 
+            WHERE business_id = $1
+        "#,
+    )
+    .bind(business_id)
+    .fetch_all(pool)
+    .await?;
+
     Ok(customers)
 }
+
 pub async fn find_by_id(
     pool: &PgPool,
     id: &str,
     business_id: &str,
 ) -> Result<Option<Customer>, AppError> {
-    let customer =
-        sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE id = $1 AND business_id = $2")
-            .bind(id)
-            .bind(business_id)
-            .fetch_optional(pool)
-            .await?;
+    let customer = sqlx::query_as::<_, Customer>(
+        r#"
+            SELECT * 
+            FROM customers 
+            WHERE id = $1 AND business_id = $2
+        "#,
+    )
+    .bind(id)
+    .bind(business_id)
+    .fetch_optional(pool)
+    .await?;
+
     Ok(customer)
 }
