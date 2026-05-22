@@ -1,6 +1,8 @@
 mod config;
+mod dal;
 mod db;
 mod errors;
+mod handlers;
 mod jobs;
 mod models;
 mod routes;

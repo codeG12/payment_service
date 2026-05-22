@@ -1,52 +1,6 @@
-use crate::errors::AppError;
-use argon2::{
-    Argon2,
-    password_hash::{PasswordHasher, SaltString},
-};
-use axum::{Json, Router, extract::State, routing::post};
-use rand::distributions::{Alphanumeric, DistString};
-use serde::{Deserialize, Serialize};
+use crate::handlers::business;
+use axum::{Router, routing::post};
 use sqlx::PgPool;
-use ulid::Ulid;
-#[derive(Deserialize)]
-pub struct CreateBusinessRequest {
-    pub name: String,
-}
-#[derive(Serialize)]
-pub struct CreateBusinessResponse {
-    pub id: String,
-    pub name: String,
-    pub api_key: String,
-}
 pub fn routes() -> Router<PgPool> {
-    Router::new().route("/", post(register_business))
-}
-async fn register_business(
-    State(pool): State<PgPool>,
-    Json(payload): Json<CreateBusinessRequest>,
-) -> Result<Json<CreateBusinessResponse>, AppError> {
-    let id = Ulid::new().to_string();
-    let random_part = Alphanumeric.sample_string(&mut rand::thread_rng(), 32);
-    let raw_key = format!("sk_{}", random_part);
-    let prefix = &raw_key[..8];
-    let salt = SaltString::generate(&mut rand::thread_rng());
-    let argon2 = Argon2::default();
-    let api_key_hash = argon2
-        .hash_password(raw_key.as_bytes(), &salt)
-        .map_err(|e| anyhow::anyhow!("Hashing failed: {}", e))?
-        .to_string();
-    sqlx::query(
-        "INSERT INTO businesses (id, name, api_key_hash, api_key_prefix) VALUES ($1, $2, $3, $4)",
-    )
-    .bind(&id)
-    .bind(&payload.name)
-    .bind(&api_key_hash)
-    .bind(prefix)
-    .execute(&pool)
-    .await?;
-    Ok(Json(CreateBusinessResponse {
-        id,
-        name: payload.name,
-        api_key: raw_key,
-    }))
+    Router::new().route("/", post(business::register_business))
 }

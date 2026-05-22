@@ -1,50 +1,143 @@
 {
 	"info": {
-		"name": "Invoice & Payment Service",
+		"name": "Invoice & Payment Service Full Collection",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "Register Business",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\"name\": \"My Business\"}",
-					"options": { "raw": { "language": "json" } }
-				},
-				"url": { "raw": "{{base_url}}/v1/businesses" }
-			}
+			"name": "Businesses",
+			"item": [
+				{
+					"name": "Register Business",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"name\": \"My Global Business\"}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/v1/businesses" }
+					}
+				}
+			]
 		},
 		{
-			"name": "Create Customer",
-			"request": {
-				"method": "POST",
-				"header": [
-					{ "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\"name\": \"John Doe\", \"email\": \"john@example.com\"}",
-					"options": { "raw": { "language": "json" } }
+			"name": "Customers",
+			"item": [
+				{
+					"name": "Create Customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"name\": \"Alice\", \"email\": \"alice@example.com\"}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/v1/customers" }
+					}
 				},
-				"url": { "raw": "{{base_url}}/v1/customers" }
-			}
+				{
+					"name": "List Customers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
+						],
+						"url": { "raw": "{{base_url}}/v1/customers" }
+					}
+				}
+			]
 		},
 		{
-			"name": "List Customers",
-			"request": {
-				"method": "GET",
-				"header": [
-					{ "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
-				],
-				"url": { "raw": "{{base_url}}/v1/customers" }
-			}
+			"name": "Invoices",
+			"item": [
+				{
+					"name": "Create Invoice",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customer_id\": \"{{customer_id}}\",\n    \"line_items\": [\n        {\n            \"description\": \"Consulting Services\",\n            \"quantity\": 5,\n            \"unit_amount_cents\": 10000\n        }\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/v1/invoices" }
+					}
+				},
+				{
+					"name": "Finalize Invoice",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
+						],
+						"url": { "raw": "{{base_url}}/v1/invoices/{{invoice_id}}/finalize" }
+					}
+				},
+				{
+					"name": "Get Invoice Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
+						],
+						"url": { "raw": "{{base_url}}/v1/invoices/{{invoice_id}}" }
+					}
+				}
+			]
+		},
+		{
+			"name": "Payments",
+			"item": [
+				{
+					"name": "Pay Invoice",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+							{ "key": "Idempotency-Key", "value": "{{$guid}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"card_token\": \"tok_success\"}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/v1/invoices/{{invoice_id}}/pay" }
+					}
+				}
+			]
+		},
+		{
+			"name": "Webhooks",
+			"item": [
+				{
+					"name": "Register Webhook",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"target_url\": \"https://webhook.site/your-unique-id\"}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/v1/webhooks" }
+					}
+				}
+			]
 		}
 	],
 	"variable": [
 		{ "key": "base_url", "value": "http://localhost:3000" },
-		{ "key": "api_key", "value": "your_api_key_here" }
+		{ "key": "api_key", "value": "sk_..." },
+		{ "key": "customer_id", "value": "ulid_here" },
+		{ "key": "invoice_id", "value": "ulid_here" }
 	]
 }

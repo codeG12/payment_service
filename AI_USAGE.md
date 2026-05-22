@@ -22,3 +22,12 @@ add webhook_delivery table: id, webhook_endpoint_id, event_type, payload JSONB, 
 ```
 
 Then I asked claude to generate a implementation plan for database layer creation and seeding the sample data within the postgres,after reviewing the implementation plan and used gemini flash to implement this layer.
+
+
+I then used gemini  to create customer and business CRUD operations. 
+
+Then invoice and bill payments after webhooks and docker-compose. 
+
+After I have refactored the code to seperate the handler and router layers and service and dal layers. and implemented transactional operations for invoice and payment operations.
+
+Then I generated API Documentation with gemini as well.

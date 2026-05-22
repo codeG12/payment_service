@@ -41,3 +41,10 @@
   `
 - The application will be available at http://localhost:3000.
 - The database will be automatically initialized and migrations will run on startup.
+
+## 8. System Architecture
+The project follows a strict layered architecture:
+- **DAL (Data Access Layer)**: Located in src/dal/. Contains all raw SQL queries using sqlx. Critical operations like invoice creation and payment processing are fully transactional.
+- **Handlers**: Located in src/handlers/. Responsible for extracting request data (JSON, Paths, Headers) and returning responses.
+- **Services**: Located in src/services/. Orchestrates business logic, state machine transitions, and external integrations (Mock PSP, Webhooks).
+- **Routes**: Located in src/routes/. Cleanly maps URL paths to the appropriate handlers.

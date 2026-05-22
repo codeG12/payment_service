@@ -1,9 +1,11 @@
+use crate::dal::invoice as i_dal;
+use crate::dal::payment as p_dal;
 use crate::errors::AppError;
-use crate::models::invoice::Invoice;
 use crate::models::payment_attempt::PaymentAttempt;
 use crate::services::webhook_service;
+use chrono::Utc;
 use serde_json::json;
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::PgPool;
 use std::time::Duration;
 use ulid::Ulid;
 pub enum PspResult {
@@ -36,30 +38,33 @@ pub async fn process_payment(
     card_token: &str,
     idempotency_key: &str,
 ) -> Result<PaymentAttempt, AppError> {
-    let invoice =
-        sqlx::query_as::<_, Invoice>("SELECT * FROM invoices WHERE id = $1 AND business_id = $2")
-            .bind(invoice_id)
-            .bind(business_id)
-            .fetch_optional(pool)
-            .await?
-            .ok_or_else(|| AppError::NotFound("Invoice not found".into()))?;
+    let invoice = i_dal::find_by_id(pool, invoice_id, business_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Invoice not found".into()))?;
     if invoice.state != "open" {
         return Err(AppError::InvalidTransition {
             from: invoice.state,
             to: "paid".into(),
         });
     }
-    if let Some(existing) = sqlx::query_as::<_, PaymentAttempt>(
-        "SELECT * FROM payment_attempts WHERE idempotency_key = $1",
-    )
-    .bind(idempotency_key)
-    .fetch_optional(pool)
-    .await?
-    {
+    if let Some(existing) = p_dal::find_by_idempotency_key(pool, idempotency_key).await? {
         return Ok(existing);
     }
     let attempt_id = Ulid::new().to_string();
-    sqlx::query("INSERT INTO payment_attempts (id, invoice_id, idempotency_key, card_token, amount_cents, currency, state) VALUES ($1, $2, $3, $4, $5, $6, $7)").bind(&attempt_id).bind(invoice_id).bind(idempotency_key).bind(card_token).bind(invoice.total_cents).bind(&invoice.currency).bind("pending").execute(pool).await?;
+    let attempt = PaymentAttempt {
+        id: attempt_id.clone(),
+        invoice_id: invoice_id.to_string(),
+        idempotency_key: idempotency_key.to_string(),
+        card_token: card_token.to_string(),
+        amount_cents: invoice.total_cents,
+        currency: invoice.currency.clone(),
+        state: "pending".to_string(),
+        psp_reference_id: None,
+        error_message: None,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    };
+    p_dal::insert_pending(pool, attempt).await?;
     let psp_res = match tokio::time::timeout(
         Duration::from_secs(10),
         call_mock_psp(card_token, invoice.total_cents),
@@ -72,18 +77,13 @@ pub async fn process_payment(
             reference: String::new(),
         },
     };
-    let mut tx = pool.begin().await?;
     let (state, psp_ref, err_msg) = match psp_res {
         PspResult::Succeeded { reference } => ("succeeded", Some(reference), None),
         PspResult::Failed { error, reference } => ("failed", Some(reference), Some(error)),
     };
-    let attempt = sqlx::query_as::<_, PaymentAttempt>("UPDATE payment_attempts SET state = $1, psp_reference_id = $2, error_message = $3, updated_at = NOW() WHERE id = $4 RETURNING *").bind(state).bind(psp_ref).bind(err_msg).bind(&attempt_id).fetch_one(&mut *tx).await?;
+    let finalized =
+        p_dal::finalize_payment(pool, &attempt_id, invoice_id, state, psp_ref, err_msg).await?;
     if state == "succeeded" {
-        sqlx::query("UPDATE invoices SET state = $1, updated_at = NOW() WHERE id = $2")
-            .bind("paid")
-            .bind(invoice_id)
-            .execute(&mut *tx)
-            .await?;
         let _ =
             webhook_service::queue_webhook(pool, business_id, "invoice.paid", json!(invoice)).await;
     } else {
@@ -91,10 +91,9 @@ pub async fn process_payment(
             pool,
             business_id,
             "invoice.payment_failed",
-            json!(attempt),
+            json!(finalized),
         )
         .await;
     }
-    tx.commit().await?;
-    Ok(attempt)
+    Ok(finalized)
 }
