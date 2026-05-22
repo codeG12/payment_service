@@ -1,21 +1,21 @@
-use payment_service::dal::{business, customer, invoice as i_dal};
-use payment_service::models::invoice::Invoice;
-use payment_service::services::payment_service;
-use sqlx::PgPool;
-use ulid::Ulid;
+use ::payment_service::dal::{business, customer, invoice as i_dal};
+use ::payment_service::models::invoice::Invoice;
+use ::payment_service::services::payment_service::process_payment;
 use chrono::Utc;
-use std::sync::Arc;
 use futures::future::join_all;
-use wiremock::{MockServer, Mock, ResponseTemplate};
+use sqlx::PgPool;
+use std::sync::Arc;
+use ulid::Ulid;
 use wiremock::matchers::{method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 async fn setup_test_data(pool: &PgPool) -> (String, String) {
     let b_id = Ulid::new().to_string();
     let _ = business::insert(pool, &b_id, "Test Biz", "hash", "prefix").await;
-    
+
     let c_id = Ulid::new().to_string();
     let _ = customer::insert(pool, &c_id, &b_id, "Customer", "c@test.com").await;
-    
+
     (b_id, c_id)
 }
 
@@ -23,7 +23,7 @@ async fn setup_test_data(pool: &PgPool) -> (String, String) {
 async fn test_concurrency_payment(pool: PgPool) {
     let (b_id, c_id) = setup_test_data(&pool).await;
     let i_id = Ulid::new().to_string();
-    
+
     sqlx::query("INSERT INTO invoices (id, business_id, customer_id, state, total_cents, due_date) VALUES ($1, $2, $3, $4, $5, $6)")
         .bind(&i_id).bind(&b_id).bind(&c_id).bind("open").bind(1000).bind(Utc::now())
         .execute(&pool).await.unwrap();
@@ -49,9 +49,9 @@ async fn test_concurrency_payment(pool: PgPool) {
         let inv = i_id.clone();
         let url = psp_url.clone();
         let i_key = format!("key_{}", i);
-        
+
         handles.push(tokio::spawn(async move {
-            payment_service::services::payment_service::process_payment(&p, &url, &b, &inv, "tok_success", &i_key).await
+            process_payment(&p, &url, &b, &inv, "tok_success", &i_key).await
         }));
     }
 
@@ -65,9 +65,15 @@ async fn test_concurrency_payment(pool: PgPool) {
         }
     }
 
-    assert_eq!(success_count, 1, "Only one payment should succeed for the same invoice");
-    
-    let final_invoice = i_dal::find_by_id(&pool, &i_id, &b_id).await.unwrap().unwrap();
+    assert_eq!(
+        success_count, 1,
+        "Only one payment should succeed for the same invoice"
+    );
+
+    let final_invoice = i_dal::find_by_id(&pool, &i_id, &b_id)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(final_invoice.state, "paid");
 }
 
@@ -75,7 +81,7 @@ async fn test_concurrency_payment(pool: PgPool) {
 async fn test_idempotency(pool: PgPool) {
     let (b_id, c_id) = setup_test_data(&pool).await;
     let i_id = Ulid::new().to_string();
-    
+
     sqlx::query("INSERT INTO invoices (id, business_id, customer_id, state, total_cents, due_date) VALUES ($1, $2, $3, $4, $5, $6)")
         .bind(&i_id).bind(&b_id).bind(&c_id).bind("open").bind(1000).bind(Utc::now())
         .execute(&pool).await.unwrap();
@@ -94,8 +100,12 @@ async fn test_idempotency(pool: PgPool) {
     let psp_url = format!("{}/charge", mock_server.uri());
     let i_key = "idemp_123";
 
-    let res1 = payment_service::services::payment_service::process_payment(&pool, &psp_url, &b_id, &i_id, "tok_success", i_key).await.unwrap();
-    let res2 = payment_service::services::payment_service::process_payment(&pool, &psp_url, &b_id, &i_id, "tok_success", i_key).await.unwrap();
+    let res1 = process_payment(&pool, &psp_url, &b_id, &i_id, "tok_success", i_key)
+        .await
+        .unwrap();
+    let res2 = process_payment(&pool, &psp_url, &b_id, &i_id, "tok_success", i_key)
+        .await
+        .unwrap();
 
     assert_eq!(res1.id, res2.id);
     assert_eq!(res1.state, res2.state);
@@ -105,7 +115,7 @@ async fn test_idempotency(pool: PgPool) {
 async fn test_psp_failure_behavior(pool: PgPool) {
     let (b_id, c_id) = setup_test_data(&pool).await;
     let i_id = Ulid::new().to_string();
-    
+
     sqlx::query("INSERT INTO invoices (id, business_id, customer_id, state, total_cents, due_date) VALUES ($1, $2, $3, $4, $5, $6)")
         .bind(&i_id).bind(&b_id).bind(&c_id).bind("open").bind(1000).bind(Utc::now())
         .execute(&pool).await.unwrap();
@@ -119,9 +129,24 @@ async fn test_psp_failure_behavior(pool: PgPool) {
 
     let psp_url = format!("{}/charge", mock_server.uri());
 
-    let res = payment_service::services::payment_service::process_payment(&pool, &psp_url, &b_id, &i_id, "tok_network_error", "key_fail").await.unwrap();
-    
+    let res = process_payment(
+        &pool,
+        &psp_url,
+        &b_id,
+        &i_id,
+        "tok_network_error",
+        "key_fail",
+    )
+    .await
+    .unwrap();
+
     assert_eq!(res.state, "failed");
-    let inv = i_dal::find_by_id(&pool, &i_id, &b_id).await.unwrap().unwrap();
-    assert_eq!(inv.state, "open", "Invoice should remain open after PSP failure");
+    let inv = i_dal::find_by_id(&pool, &i_id, &b_id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        inv.state, "open",
+        "Invoice should remain open after PSP failure"
+    );
 }

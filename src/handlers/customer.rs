@@ -3,8 +3,8 @@ use crate::errors::AppError;
 use crate::models::customer::Customer;
 use crate::routes::auth::AuthenticatedBusiness;
 use axum::{
-    Json,
     extract::{Path, State},
+    Json,
 };
 use serde::Deserialize;
 use sqlx::PgPool;

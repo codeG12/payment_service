@@ -1,7 +1,7 @@
 use crate::handlers::webhook;
 use axum::{
-    Router,
     routing::{delete, post},
+    Router,
 };
 use sqlx::PgPool;
 pub fn routes() -> Router<PgPool> {

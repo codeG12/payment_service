@@ -1,7 +1,7 @@
 use crate::handlers::invoice;
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
 use sqlx::PgPool;
 pub fn routes() -> Router<PgPool> {

@@ -4,8 +4,8 @@ use crate::models::invoice::Invoice;
 use crate::routes::auth::AuthenticatedBusiness;
 use crate::services::invoice_service;
 use axum::{
-    Json,
     extract::{Path, Query, State},
+    Json,
 };
 use serde::Deserialize;
 use sqlx::PgPool;

@@ -2,11 +2,11 @@ services:
   app:
     build: .
     ports:
-      - "${PORT:-3000}:${PORT:-3000}"
+      - "3000:3000"
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-payment_service}
-      - PORT=${PORT:-3000}
-      - PSP_URL=http://app:3000/v1/mock_psp/charge
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/payment_service
+      - PORT=3000
+      - PSP_URL=http://localhost:3000/v1/mock_psp/charge
       - RUST_LOG=info
     depends_on:
       db:
@@ -15,18 +15,18 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-payment_service}
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=payment_service
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-payment_service}"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d payment_service"]
+      interval: 2s
       timeout: 5s
-      retries: 5
+      retries: 10
 
 volumes:
   postgres_data:

@@ -1,10 +1,10 @@
 use crate::dal::business as dal;
 use crate::errors::AppError;
 use argon2::{
-    Argon2,
     password_hash::{PasswordHasher, SaltString},
+    Argon2,
 };
-use axum::{Json, extract::State};
+use axum::{extract::State, Json};
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;

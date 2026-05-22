@@ -1,1 +1,22 @@
-use std::env; #[derive(Clone)] pub struct AppConfig { pub database_url: String, pub port: u16, pub psp_url: String, } impl AppConfig { pub fn from_env() -> Self { dotenvy::dotenv().ok(); let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string()).parse().expect("PORT must be a number"); Self { database_url: env::var("DATABASE_URL").expect("DATABASE_URL must be set"), port, psp_url: env::var("PSP_URL").unwrap_or_else(|_| format!("http://localhost:{}/v1/mock_psp/charge", port)), } } }
+use std::env;
+#[derive(Clone)]
+pub struct AppConfig {
+    pub database_url: String,
+    pub port: u16,
+    pub psp_url: String,
+}
+impl AppConfig {
+    pub fn from_env() -> Self {
+        dotenvy::dotenv().ok();
+        let port = env::var("PORT")
+            .unwrap_or_else(|_| "3000".to_string())
+            .parse()
+            .expect("PORT must be a number");
+        Self {
+            database_url: env::var("DATABASE_URL").expect("DATABASE_URL must be set"),
+            port,
+            psp_url: env::var("PSP_URL")
+                .unwrap_or_else(|_| format!("http://localhost:{}/v1/mock_psp/charge", port)),
+        }
+    }
+}

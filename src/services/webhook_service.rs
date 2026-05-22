@@ -4,7 +4,7 @@ use crate::models::webhook::{WebhookDelivery, WebhookEndpoint};
 use chrono::{Duration as ChronoDuration, Utc};
 use hex;
 use hmac::{Hmac, Mac};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sha2::Sha256;
 use sqlx::PgPool;
 use std::time::Duration;

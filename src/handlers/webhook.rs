@@ -4,8 +4,8 @@ use crate::models::webhook::WebhookEndpoint;
 use crate::routes::auth::AuthenticatedBusiness;
 use crate::services::webhook_service;
 use axum::{
-    Json,
     extract::{Path, State},
+    Json,
 };
 use serde::Deserialize;
 use sqlx::PgPool;
