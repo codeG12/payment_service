@@ -1,26 +1,41 @@
-use axum::{Router, routing::get};
+mod config;
+mod db;
+mod errors;
+mod jobs;
+mod models;
+mod routes;
+mod services;
+
+use crate::config::AppConfig;
+use crate::db::init_pool;
+use axum::Router;
 use std::net::SocketAddr;
-use tracing::{Level, info};
-use tracing_subscriber::FmtSubscriber;
+use tracing::info;
 
 #[tokio::main]
-async fn main() {
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    dotenvy::dotenv().ok();
 
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    // Initialize tracing
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
 
-    let app = Router::new().route("/", get(handler));
+    let config = AppConfig::from_env();
+    let pool = init_pool(&config).await?;
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    info!("listening on {}", addr);
+    // Run migrations
+    info!("Running migrations...");
+    sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
-}
+    // Set up app state
+    let app = Router::new().nest("/v1", routes::routes(pool.clone(), config.clone()));
 
-async fn handler() -> &'static str {
-    info!("handling request");
-    "Hello, world!"
+    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
+    info!("Server listening on {}", addr);
+
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }

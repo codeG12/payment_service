@@ -1,0 +1,1 @@
+CREATE TABLE line_items (id TEXT PRIMARY KEY, invoice_id TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE, description TEXT NOT NULL, quantity INT NOT NULL CHECK (quantity > 0), unit_amount_cents BIGINT NOT NULL CHECK (unit_amount_cents >= 0), amount_cents BIGINT NOT NULL, position INT NOT NULL DEFAULT 0);
