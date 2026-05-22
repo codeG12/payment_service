@@ -6,6 +6,7 @@ services:
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-payment_service}
       - PORT=${PORT:-3000}
+      - PSP_URL=http://app:3000/v1/mock_psp/charge
       - RUST_LOG=info
     depends_on:
       db:

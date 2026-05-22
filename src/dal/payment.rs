@@ -1,6 +1,6 @@
 use crate::errors::AppError;
 use crate::models::payment_attempt::PaymentAttempt;
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::PgPool;
 
 pub async fn find_by_idempotency_key(
     pool: &PgPool,
@@ -8,8 +8,8 @@ pub async fn find_by_idempotency_key(
 ) -> Result<Option<PaymentAttempt>, AppError> {
     let attempt = sqlx::query_as::<_, PaymentAttempt>(
         r#"
-            SELECT * 
-            FROM payment_attempts 
+            SELECT *
+            FROM payment_attempts
             WHERE idempotency_key = $1
         "#,
     )
@@ -22,7 +22,7 @@ pub async fn find_by_idempotency_key(
 
 pub async fn insert_pending(pool: &PgPool, attempt: PaymentAttempt) -> Result<(), AppError> {
     sqlx::query(r#"
-            INSERT INTO payment_attempts (id, invoice_id, idempotency_key, card_token, amount_cents, currency, state) 
+            INSERT INTO payment_attempts (id, invoice_id, idempotency_key, card_token, amount_cents, currency, state)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#)
         .bind(attempt.id)
@@ -50,9 +50,9 @@ pub async fn finalize_payment(
 
     let attempt = sqlx::query_as::<_, PaymentAttempt>(
         r#"
-            UPDATE payment_attempts 
-            SET state = $1, psp_reference_id = $2, error_message = $3, updated_at = NOW() 
-            WHERE id = $4 
+            UPDATE payment_attempts
+            SET state = $1, psp_reference_id = $2, error_message = $3, updated_at = NOW()
+            WHERE id = $4
             RETURNING *
         "#,
     )
@@ -66,8 +66,8 @@ pub async fn finalize_payment(
     if state == "succeeded" {
         sqlx::query(
             r#"
-                UPDATE invoices 
-                SET state = $1, updated_at = NOW() 
+                UPDATE invoices
+                SET state = $1, updated_at = NOW()
                 WHERE id = $2
             "#,
         )

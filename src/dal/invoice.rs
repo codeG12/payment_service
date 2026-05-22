@@ -1,6 +1,6 @@
 use crate::errors::AppError;
 use crate::models::invoice::{Invoice, LineItem};
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::PgPool;
 use ulid::Ulid;
 
 pub async fn create_with_items(
@@ -13,7 +13,7 @@ pub async fn create_with_items(
     for (pos, (desc, qty, unit_amount)) in items.into_iter().enumerate() {
         let amount = qty as i64 * unit_amount;
         sqlx::query(r#"
-                INSERT INTO line_items (id, invoice_id, description, quantity, unit_amount_cents, amount_cents, position) 
+                INSERT INTO line_items (id, invoice_id, description, quantity, unit_amount_cents, amount_cents, position)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
             "#)
             .bind(Ulid::new().to_string())
@@ -28,8 +28,8 @@ pub async fn create_with_items(
     }
 
     let created = sqlx::query_as::<_, Invoice>(r#"
-            INSERT INTO invoices (id, business_id, customer_id, total_cents, due_date, idempotency_key) 
-            VALUES ($1, $2, $3, $4, $5, $6) 
+            INSERT INTO invoices (id, business_id, customer_id, total_cents, due_date, idempotency_key)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         "#)
         .bind(&invoice.id)
@@ -52,8 +52,8 @@ pub async fn find_by_id(
 ) -> Result<Option<Invoice>, AppError> {
     let invoice = sqlx::query_as::<_, Invoice>(
         r#"
-            SELECT * 
-            FROM invoices 
+            SELECT *
+            FROM invoices
             WHERE id = $1 AND business_id = $2
         "#,
     )
@@ -71,9 +71,9 @@ pub async fn find_items_by_invoice_id(
 ) -> Result<Vec<LineItem>, AppError> {
     let items = sqlx::query_as::<_, LineItem>(
         r#"
-            SELECT * 
-            FROM line_items 
-            WHERE invoice_id = $1 
+            SELECT *
+            FROM line_items
+            WHERE invoice_id = $1
             ORDER BY position
         "#,
     )
@@ -92,8 +92,8 @@ pub async fn list(
     let invoices = if let Some(s) = state {
         sqlx::query_as::<_, Invoice>(
             r#"
-                SELECT * 
-                FROM invoices 
+                SELECT *
+                FROM invoices
                 WHERE business_id = $1 AND state = $2
             "#,
         )
@@ -104,8 +104,8 @@ pub async fn list(
     } else {
         sqlx::query_as::<_, Invoice>(
             r#"
-                SELECT * 
-                FROM invoices 
+                SELECT *
+                FROM invoices
                 WHERE business_id = $1
             "#,
         )
@@ -120,9 +120,9 @@ pub async fn list(
 pub async fn update_state(pool: &PgPool, id: &str, state: &str) -> Result<Invoice, AppError> {
     let updated = sqlx::query_as::<_, Invoice>(
         r#"
-            UPDATE invoices 
-            SET state = $1, updated_at = NOW() 
-            WHERE id = $2 
+            UPDATE invoices
+            SET state = $1, updated_at = NOW()
+            WHERE id = $2
             RETURNING *
         "#,
     )
@@ -137,9 +137,9 @@ pub async fn update_state(pool: &PgPool, id: &str, state: &str) -> Result<Invoic
 pub async fn update_overdue(pool: &PgPool) -> Result<Vec<Invoice>, AppError> {
     let rows = sqlx::query_as::<_, Invoice>(
         r#"
-            UPDATE invoices 
-            SET state = $1, updated_at = NOW() 
-            WHERE state = $2 AND due_date < NOW() 
+            UPDATE invoices
+            SET state = $1, updated_at = NOW()
+            WHERE state = $2 AND due_date < NOW()
             RETURNING *
         "#,
     )

@@ -86,7 +86,7 @@ CREATE INDEX idx_webhook_deliveries_retry ON webhook_deliveries(state, next_retr
 ```
 
 ## ER Diagram
-
+![ER Diagram](./images/paymentservice_erdiagram.png)
 
 ## Invoice State Diagram
 ![Invoice State Diagram](./images/invoice_state_diagram.png)
