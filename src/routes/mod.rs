@@ -11,6 +11,7 @@ pub fn routes(pool: PgPool, config: AppConfig) -> Router {
     Router::new()
         .nest("/customers", customers::routes())
         .nest("/invoices", invoices::routes())
+        .merge(payments::routes())
         .nest("/webhooks", webhooks::routes())
         .nest("/businesses", businesses::routes())
         .with_state(pool)
