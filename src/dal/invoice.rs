@@ -1,9 +1,13 @@
-use sqlx::{PgPool, Postgres, Transaction};
-use crate::models::invoice::{Invoice, LineItem};
 use crate::errors::AppError;
+use crate::models::invoice::{Invoice, LineItem};
+use sqlx::{PgPool, Postgres, Transaction};
 use ulid::Ulid;
 
-pub async fn create_with_items(pool: &PgPool, invoice: Invoice, items: Vec<(String, i32, i64)>) -> Result<Invoice, AppError> {
+pub async fn create_with_items(
+    pool: &PgPool,
+    invoice: Invoice,
+    items: Vec<(String, i32, i64)>,
+) -> Result<Invoice, AppError> {
     let mut tx = pool.begin().await?;
 
     // 1. Insert Invoice first to satisfy Foreign Key constraints
@@ -43,84 +47,108 @@ pub async fn create_with_items(pool: &PgPool, invoice: Invoice, items: Vec<(Stri
     Ok(created)
 }
 
-pub async fn find_by_id(pool: &PgPool, id: &str, business_id: &str) -> Result<Option<Invoice>, AppError> {
-    let invoice = sqlx::query_as::<_, Invoice>(r#"
+pub async fn find_by_id(
+    pool: &PgPool,
+    id: &str,
+    business_id: &str,
+) -> Result<Option<Invoice>, AppError> {
+    let invoice = sqlx::query_as::<_, Invoice>(
+        r#"
             SELECT * 
             FROM invoices 
             WHERE id = $1 AND business_id = $2
-        "#)
-        .bind(id)
-        .bind(business_id)
-        .fetch_optional(pool)
-        .await?;
+        "#,
+    )
+    .bind(id)
+    .bind(business_id)
+    .fetch_optional(pool)
+    .await?;
 
     Ok(invoice)
 }
 
-pub async fn find_items_by_invoice_id(pool: &PgPool, invoice_id: &str) -> Result<Vec<LineItem>, AppError> {
-    let items = sqlx::query_as::<_, LineItem>(r#"
+pub async fn find_items_by_invoice_id(
+    pool: &PgPool,
+    invoice_id: &str,
+) -> Result<Vec<LineItem>, AppError> {
+    let items = sqlx::query_as::<_, LineItem>(
+        r#"
             SELECT * 
             FROM line_items 
             WHERE invoice_id = $1 
             ORDER BY position
-        "#)
-        .bind(invoice_id)
-        .fetch_all(pool)
-        .await?;
+        "#,
+    )
+    .bind(invoice_id)
+    .fetch_all(pool)
+    .await?;
 
     Ok(items)
 }
 
-pub async fn list(pool: &PgPool, business_id: &str, state: Option<String>) -> Result<Vec<Invoice>, AppError> {
+pub async fn list(
+    pool: &PgPool,
+    business_id: &str,
+    state: Option<String>,
+) -> Result<Vec<Invoice>, AppError> {
     let invoices = if let Some(s) = state {
-        sqlx::query_as::<_, Invoice>(r#"
+        sqlx::query_as::<_, Invoice>(
+            r#"
                 SELECT * 
                 FROM invoices 
                 WHERE business_id = $1 AND state = $2
-            "#)
-            .bind(business_id)
-            .bind(s)
-            .fetch_all(pool)
-            .await?
+            "#,
+        )
+        .bind(business_id)
+        .bind(s)
+        .fetch_all(pool)
+        .await?
     } else {
-        sqlx::query_as::<_, Invoice>(r#"
+        sqlx::query_as::<_, Invoice>(
+            r#"
                 SELECT * 
                 FROM invoices 
                 WHERE business_id = $1
-            "#)
-            .bind(business_id)
-            .fetch_all(pool)
-            .await?
+            "#,
+        )
+        .bind(business_id)
+        .fetch_all(pool)
+        .await?
     };
 
     Ok(invoices)
 }
 
 pub async fn update_state(pool: &PgPool, id: &str, state: &str) -> Result<Invoice, AppError> {
-    let updated = sqlx::query_as::<_, Invoice>(r#"
+    let updated = sqlx::query_as::<_, Invoice>(
+        r#"
             UPDATE invoices 
             SET state = $1, updated_at = NOW() 
             WHERE id = $2 
             RETURNING *
-        "#)
-        .bind(state)
-        .bind(id)
-        .fetch_one(pool)
-        .await?;
+        "#,
+    )
+    .bind(state)
+    .bind(id)
+    .fetch_one(pool)
+    .await?;
 
     Ok(updated)
 }
 
 pub async fn update_overdue(pool: &PgPool) -> Result<Vec<Invoice>, AppError> {
-    let rows = sqlx::query_as::<_, Invoice>(r#"
+    let rows = sqlx::query_as::<_, Invoice>(
+        r#"
             UPDATE invoices 
             SET state = $1, updated_at = NOW() 
             WHERE state = $2 AND due_date < NOW() 
             RETURNING *
-        "#)
-        .bind("uncollectible")
-        .bind("open")
-        .fetch_all(pool).await?;
+        "#,
+    )
+    .bind("uncollectible")
+    .bind("open")
+    .fetch_all(pool)
+    .await?;
 
     Ok(rows)
 }

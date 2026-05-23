@@ -31,3 +31,6 @@ cargo test
 - [WALKTHROUGH.md](./WALKTHROUGH.md): Step-by-step usage guide.
 - [API.md](./docs/API.md): Full endpoint reference.
 - [Postman Collection](./docs/postman_collection.json): Importable collection for testing.
+
+## Video walkthrough
+https://drive.google.com/file/d/1BbTZYmp7aeZyOcCxAabV-s5ZJxl64ao9/view?usp=sharing

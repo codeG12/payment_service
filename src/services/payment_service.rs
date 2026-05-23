@@ -82,7 +82,7 @@ pub async fn process_payment(
             None,
             Some(format!("PSP Error: {}", resp.status())),
         ),
-        Err(e) if e.is_timeout() => ("failed", None, Some("psp_timeout".into())),
+        Err(e) if e.is_timeout() => ("pending", None, Some("psp_timeout".into())),
         Err(e) => ("failed", None, Some(format!("Network Error: {}", e))),
     };
     let res = p_dal::finalize_payment(pool, &attempt_id, invoice_id, state, psp_ref, err_msg).await;
@@ -96,7 +96,7 @@ pub async fn process_payment(
                     json!(invoice),
                 )
                 .await;
-            } else {
+            } else if state == "failed" {
                 let _ = webhook_service::queue_webhook(
                     pool,
                     business_id,

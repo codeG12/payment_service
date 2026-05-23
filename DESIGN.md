@@ -2,7 +2,7 @@
 I chose Rust as a developing language since I'm familiar and quite a 2 year experience with it. 
 
 For web framework, I chose axum since it has the tokio runtime and it ensures unparalleled
-concurrency performance allowing the server to handle thoushands of request with low latency and for postgres migration using sqlx migration seems optimal for given time constraint.
+concurrency performance allowing the server to handle thousands of request with low latency and for postgres migration using sqlx migration seems optimal for given time constraint.
 and for accessing data in postgres chose the sqlx libray since it's compile time verification performance.
 
 ## Database Model
@@ -31,7 +31,7 @@ CREATE TABLE invoices (
     id               TEXT        PRIMARY KEY,
     business_id      TEXT        NOT NULL REFERENCES businesses(id),
     customer_id      TEXT        NOT NULL REFERENCES customers(id),
-    state            TEXT        NOT NULL DEFAULT 'draft',
+    state            TEXT        NOT NULL DEFAULT 'draft, cancelled, open, success, uncollectible',
     currency         CHAR(3)     NOT NULL DEFAULT 'USD',
     total_cents      BIGINT      NOT NULL,              -- server-computed, never from client
     due_date         TIMESTAMPTZ NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE payment_attempts (
     id               TEXT        PRIMARY KEY,
     invoice_id       TEXT        NOT NULL REFERENCES invoices(id),
     idempotency_key  TEXT        NOT NULL UNIQUE,      -- enforces idempotency
-    card_token       TEXT        NOT NULL,
+    card_token       TEXT        NOT NULL,             -- tok_success, tok_timeout, tok_network_error 
     amount_cents     BIGINT      NOT NULL,
     currency         CHAR(3)     NOT NULL DEFAULT 'USD',
     state            TEXT        NOT NULL DEFAULT 'pending',
